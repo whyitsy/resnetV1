@@ -7,7 +7,7 @@ ResNet采用的是以块为单位来组织的结构,所以先实现残差块Resi
 ResNet的卷积层不推荐使用bias,因为会有batchNorm进行归一化,使得bias不起作用还增加了参数量 
 '''
 
-class ResidualBlock(nn.modules):
+class ResidualBlock(nn.Module):
     '''
     18层和34层的resnet的残差块中有两个3x3卷积conv1和conv2,这两个kernel之间没有大小(feature map size)和通道数的变化
     只有在块与块之间的连接可能会有大小和通道数的变化,那么为了残差能够进行连接就需要将输入调整
@@ -38,8 +38,8 @@ class ResidualBlock(nn.modules):
     def forward(self,X):
         out = self.conv1(X)
         out = self.bn1(out)
-        out = nn.ReLU(out)
-        
+        out = nn.functional.relu(out)
+
         out = self.conv2(out)
         out = self.bn2(out)
         # 如果需要使用1x1conv
@@ -48,15 +48,34 @@ class ResidualBlock(nn.modules):
         
         # 残差链接
         out += X
-        return nn.ReLU(out)
+        return nn.functional.relu(out)
+
+'''
+在测试的时候出现了nn.ReLU报错和nn.functional.relu通过的情况 
+可能是因为在测试时并没有把block添加到Sequential里面
+'''
+# 输入大小不变，channel不变
+# blk1 = ResidualBlock(3,3) # in和out channel相同,则大小不变
+# X = torch.rand(4,3,6,6)
+# Y = blk1(X)
+# print(Y.shape) # torch.Size([4, 3, 6, 6])
+
+# 输入大小减半，channel翻倍
+# blk2 = ResidualBlock(3,6,stride=2,use_1x1conv=True) # channel数翻倍 调整stride和use_1x1conv
+# X = torch.rand(4,3,6,6)
+# Y = blk2(X) 
+# print(Y.shape) # torch.Size([4, 6, 3, 3])
 
 
+'''
+输入大小为224*224*3
+conv1:在对比的VGG19中,使用的是两个3x3的kernel,resnet中直接使用7x7实现同样效果:大小减半,通道数64
 
-
-
-
-
-
+ResNet使用4个由若干残差块组成的模块,每个模块中的残差块重复多次
+第一个模块的通道数同输入通道数一致。 由于之前已经使用了步幅为2的最大汇聚层,所以无须减小高和宽。 
+之后的每个模块在第一个残差块里将上一个模块的通道数翻倍，并将高和宽减半。
+所以需要单独处理第一个模块
+'''
 
 
 

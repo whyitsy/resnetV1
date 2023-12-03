@@ -57,8 +57,6 @@ test_iter = torch.utils.data.DataLoader(test_dataset,batch_size=batch_size,shuff
 resnet34 = Resnet34.Resnet()
 # print(resnet34.layer5[2])
 
-resnet34.to(device)
-
 pretrained_model_weights = 'resnet34-pre.pth'
 resnet34.load_state_dict(torch.load(pretrained_model_weights),strict=False)
 
@@ -69,6 +67,8 @@ resnet34.load_state_dict(torch.load(pretrained_model_weights),strict=False)
 '''
 # 加载预训练权重后修改最后全连接层的输出类别
 resnet34.layer5[2] = torch.nn.Linear(in_features=512,out_features=5)
+
+resnet34 = resnet34.to(device)
 
 # 损失函数
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -84,7 +84,7 @@ for epoch in range(epochs):
     resnet34.train()
     batch_loss = 0
     # 将train_iter进行迭代,返回步数便于统计,就不需要自己定义轮数了
-    for step,data in tqdm.tqdm(enumerate(train_iter)):
+    for step,data in tqdm.tqdm(enumerate(train_iter),"Resnet Training"):
         images,labels = data  # 这时一个batch
         optimizer.zero_grad() # 训练前清空梯度
         
@@ -119,11 +119,14 @@ for epoch in range(epochs):
             labels = labels.to(device)
 
             outputs = resnet34(images)
+            #查看outputs.shape 用于确认如何获取最大值
+            print(outputs.shape)
 
-            acc += (outputs.argmax(axis = 1) == labels).sum().item()
+            prediction = outputs.argmax(axis = 1)
+            acc += (prediction == labels).sum()
 
     # 测试集的准确率       
-    acc = acc/len(images)
+    acc = acc/test_num
 
     # 保存准确率高的模型
     if best_acc < acc:

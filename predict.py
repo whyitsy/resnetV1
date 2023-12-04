@@ -32,6 +32,7 @@ with open("class_idx.json",'r') as f:
 
 # create model
 resnet34 = Resnet()
+resnet34.layer5[2] = torch.nn.Linear(512,5)
 
 # 加载权重
 weight_path = 'fine_tuning_resnet34.pth'

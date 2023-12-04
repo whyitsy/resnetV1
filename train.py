@@ -55,7 +55,6 @@ train_iter = torch.utils.data.DataLoader(train_dataset,batch_size=batch_size,shu
 test_iter = torch.utils.data.DataLoader(test_dataset,batch_size=batch_size,shuffle=True,num_workers=0)
 
 resnet34 = Resnet34.Resnet()
-# print(resnet34.layer5[2])
 
 pretrained_model_weights = 'resnet34-pre.pth'
 resnet34.load_state_dict(torch.load(pretrained_model_weights),strict=False)
@@ -67,6 +66,7 @@ resnet34.load_state_dict(torch.load(pretrained_model_weights),strict=False)
 '''
 # 加载预训练权重后修改最后全连接层的输出类别
 resnet34.layer5[2] = torch.nn.Linear(in_features=512,out_features=5)
+# print(resnet34)
 
 resnet34 = resnet34.to(device)
 
@@ -78,16 +78,15 @@ optimizer = torch.optim.Adam(resnet34.parameters(),lr=0.0001)
 best_acc = 0.0
 save_path = './fine_tuning_resnet34.pth'
 epochs = 5
-
+train_steps = len(train_iter)
 for epoch in range(epochs):
     # train
     resnet34.train()
-    batch_loss = 0
-    # 将train_iter进行迭代,返回步数便于统计,就不需要自己定义轮数了
+    epoch_loss = 0
+    # 将train_iter进行迭代
     for step,data in tqdm.tqdm(enumerate(train_iter),"Resnet Training"):
         images,labels = data  # 这时一个batch
         optimizer.zero_grad() # 训练前清空梯度
-        
         # 数据移动到cuda
         images = images.to(device)
         labels = labels.to(device)
@@ -97,6 +96,7 @@ for epoch in range(epochs):
 
         # 计算损失
         loss = loss_fn(outputs,labels)
+        print("loss:",loss)
 
         # 反向传播计算梯度
         loss.backward()
@@ -105,14 +105,14 @@ for epoch in range(epochs):
         optimizer.step()
 
         # 累计损失
-        batch_loss += loss.item()
+        epoch_loss += loss.item()
 
     # eval
     resnet34.eval()
 
     acc = 0.0
     with torch.no_grad():
-        for step,data in tqdm.tqdm(enumerate(test_iter)):
+        for _,data in tqdm.tqdm(enumerate(test_iter)):
             images, labels = data
 
             images = images.to(device)
@@ -120,10 +120,11 @@ for epoch in range(epochs):
 
             outputs = resnet34(images)
             #查看outputs.shape 用于确认如何获取最大值
-            print(outputs.shape)
+            print("outputs.shape:",outputs.shape)
 
-            prediction = outputs.argmax(axis = 1)
-            acc += (prediction == labels).sum()
+            prediction = outputs.argmax(axis=1)
+            # print("prediction:",prediction)
+            acc += (prediction == labels).sum().item()
 
     # 测试集的准确率       
     acc = acc/test_num
@@ -133,7 +134,7 @@ for epoch in range(epochs):
         best_acc = acc
         torch.save(resnet34.state_dict(),save_path)
 
-    print(f"epoch:{epoch+1}, train_loss:{loss},validate_acc:{best_acc}")
+    print(f"epoch:{epoch+1}, train_loss:{epoch_loss/train_steps},validate_acc:{best_acc}")
 
 print("Finished Training!")
     

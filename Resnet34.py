@@ -81,15 +81,15 @@ class Resnet(nn.Module):
         self.layer0 = nn.Sequential(nn.Conv2d(3,64,7,2,3,bias=False),nn.BatchNorm2d(64),nn.ReLU(),
                             nn.MaxPool2d(3,2,1))
          # 构建四个layer
-        self.layer1 = self.makelayer(64,64,3,True)
+        self.layer1 = nn.Sequential(*self.makelayer(64,64,3,True))
 
-        self.layer2 = self.makelayer(64,128,4)
+        self.layer2 = nn.Sequential(*self.makelayer(64,128,4))
 
-        self.layer3 = self.makelayer(128,256,6)
+        self.layer3 = nn.Sequential(*self.makelayer(128,256,6))
 
-        self.layer4 = self.makelayer(256,512,3)
+        self.layer4 = nn.Sequential(*self.makelayer(256,512,3))
 
-         # 构建平均池化层和全连接层
+        # 构建平均池化层和全连接层
         '''
         全局平均池化层,参数表示输出大小 为1
         然后将512channel展平用于后续全连接层
@@ -97,14 +97,18 @@ class Resnet(nn.Module):
         '''
         self.layer5 = nn.Sequential(nn.AdaptiveAvgPool2d(1),nn.Flatten(),nn.Linear(512,1000))
         
-        # 构建resnet
-        self.resnet = nn.Sequential(self.layer0,*self.layer1,*self.layer2,*self.layer3,*self.layer4,self.layer5)
-        
-
+       
     def forward(self,X):
-        for layer in self.resnet:
-            X = layer(X)
-        return X
+        # for layer in self.resnet:
+        #     X = layer(X)
+        # return X
+        Y = self.layer0(X)
+        Y = self.layer1(Y)
+        Y = self.layer2(Y)
+        Y = self.layer3(Y)
+        Y = self.layer4(Y)
+        Y = self.layer5(Y)
+        return Y
     
     # 构建layer,resnet有四个layer组成
     def makelayer(self,in_channel,out_channel,num_blocks,first_layer=False):

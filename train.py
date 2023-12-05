@@ -1,5 +1,5 @@
-import torchvision
 from torchvision import transforms
+import torchvision
 import torch
 import json
 import tqdm
@@ -84,7 +84,7 @@ for epoch in range(epochs):
     resnet34.train()
     epoch_loss = 0
     # 将train_iter进行迭代
-    for step,data in tqdm.tqdm(enumerate(train_iter),"Resnet Training"):
+    for _,data in tqdm.tqdm(enumerate(train_iter),"Resnet Training"):
         images,labels = data  # 这时一个batch
         optimizer.zero_grad() # 训练前清空梯度
         # 数据移动到cuda
